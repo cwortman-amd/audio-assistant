@@ -30,9 +30,14 @@ npm run dev
 The application will be available at `http://localhost:5173`.
 
 ## Usage
-1.  **Mic Control**: Toggle the microphone on/off.
-2.  **Recording**: Start/Stop recording. Audio is sent to the backend only while recording.
-3.  **Demo**: Play back the last recorded audio clip.
+1.  **Mic Control**: Click the **Microphone** icon to toggle the microphone on/off.
+2.  **Recording**: Click the **Disc** icon to Start/Stop recording. Audio is sent to the backend only while recording.
+3.  **Demo**: Click the **Play** icon to play back the last recorded audio clip.
+
+## UI Overview
+- **Visualizer**: A circular audio visualizer that reacts to microphone input (red outer ring) and audio playback (cyan inner ring).
+- **Controls**: Minimalist, circular icon buttons (Mic, Record, Play) arranged horizontally in the center.
+- **Transcription**: A transparent, auto-scrolling text overlay at the bottom of the screen displaying real-time transcription.
 
 ## Configuration
 - The WebSocket URL is configured in `src/hooks/useAudioAnalyzer.ts` (default: `ws://localhost:8000/ws/transcribe`).
