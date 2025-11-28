@@ -17,7 +17,7 @@ app.add_middleware(
 
 # Initialize Whisper Service
 # Using 'base' for faster testing, change to 'large-v3-turbo' for production if hardware allows
-whisper_service = WhisperService(model_size="large-v3-turbo", device="cpu", compute_type="int8")
+whisper_service = WhisperService(model_size="base", device="cpu", compute_type="int8")
 
 @app.get("/")
 async def root():

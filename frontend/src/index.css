@@ -73,16 +73,20 @@ button svg {
 }
 
 @media (max-width: 600px) {
+  /* Remove the previous button styles that forced text-like padding */
   button {
-    padding: 0.8em 1.5em;
-    font-size: 1.1em;
-    touch-action: manipulation;
-    flex: 1;
-    max-width: 200px;
+    /* Keep the clamp size logic from the main rule, or adjust if needed */
+    /* width: clamp(30px, 8vmin, 50px); */
+    /* height: clamp(30px, 8vmin, 50px); */
+    /* Ensure padding is reset */
+    padding: 0;
+    flex: 0 0 auto; /* Prevent flexing */
+    max-width: none;
   }
 
   .control-panel {
-    bottom: 3rem;
+    /* Adjust position if needed, but centering is usually fine */
+    /* bottom: 3rem; */
     gap: 0.5rem;
   }
 }

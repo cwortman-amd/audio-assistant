@@ -49,3 +49,12 @@ You can use `pytest` to discover and run compatible tests:
 ```bash
 pytest
 ```
+### 5. `check.sh` (Health Check)
+**Description**: A shell script to verify that the API server is reachable.
+1.  Sends a `HEAD` request to `http://localhost:8000/` (or host/port defined in `.env`).
+2.  Checks for a `200 OK` response.
+
+**Usage**:
+```bash
+./check.sh
+```

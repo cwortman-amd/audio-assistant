@@ -50,3 +50,40 @@ An automated test script is provided to verify the transcription pipeline.
 
 ## Independent Execution
 This server runs independently and can be accessed by any WebSocket client. It does not serve the frontend files.
+
+## CLI Usage
+
+The backend includes a command-line interface (CLI) for performing Text-to-Speech (TTS) and Speech-to-Text (STT) operations independently.
+
+### Text-to-Speech (TTS)
+Generate audio from text:
+```bash
+python cli.py tts "Hello world" --output output.mp3
+```
+
+### Speech-to-Text (STT)
+Transcribe an audio file:
+```bash
+python cli.py stt output.mp3
+```
+
+## Playing Audio Output
+
+To play the generated `.mp3` files on Linux, you can use various command-line tools or media players.
+
+### Using `mpg123` (Command Line)
+If not installed: `sudo apt-get install mpg123`
+```bash
+mpg123 output.mp3
+```
+
+### Using `ffplay` (Part of FFmpeg)
+Since you already have FFmpeg installed:
+```bash
+ffplay -nodisp -autoexit output.mp3
+```
+
+### Using `vlc`
+```bash
+vlc output.mp3
+```

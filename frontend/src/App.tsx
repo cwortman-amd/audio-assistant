@@ -104,7 +104,7 @@ function App() {
           }}
           title={isDemoPlaying ? "Stop Demo" : "Play Demo"}
         >
-          {isDemoPlaying ? <Square size={24} color="#00ffff" fill="#00ffff" /> : <Play size={24} color="#fff" />}
+          {isDemoPlaying ? <Square size={24} color="#00ffff" /> : <Play size={24} color={isMicOn ? "#fff" : "#666"} />}
         </button>
       </div>
     </>
