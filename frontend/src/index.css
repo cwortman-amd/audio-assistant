@@ -1,0 +1,82 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #000000;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#root {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid #333; /* Dark charcoal outer trace */
+  padding: 0.4em 0.8em;
+  font-size: 0.9em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: transparent; /* Transparent background */
+  cursor: pointer;
+  transition: border-color 0.25s, background-color 0.25s;
+  width: 150px; /* Fixed width for uniform size */
+}
+button:hover {
+  border-color: #ff0000;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+.control-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 20; /* Ensure it's above the visualizer */
+  width: auto; /* Don't take full width */
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+  button {
+    padding: 0.8em 1.5em;
+    font-size: 1.1em;
+    touch-action: manipulation;
+    flex: 1;
+    max-width: 200px;
+  }
+
+  .control-panel {
+    bottom: 3rem;
+    gap: 0.5rem;
+  }
+}
