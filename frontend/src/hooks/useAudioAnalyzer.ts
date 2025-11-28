@@ -23,8 +23,6 @@ export const useAudioAnalyzer = () => {
 
   // Output refs
   const outputAnalyserRef = useRef<AnalyserNode | null>(null);
-  const oscillatorRef = useRef<OscillatorNode | null>(null);
-  const gainNodeRef = useRef<GainNode | null>(null);
 
   const initAudioContext = () => {
     if (!audioContextRef.current) {
@@ -221,7 +219,7 @@ export const useAudioAnalyzer = () => {
     setIsDemoPlaying(false);
   }, []);
 
-  const toggleDemo = useCallback(() => {
+  const togglePlay = useCallback(() => {
       if (isDemoPlaying) {
           stopDemoAudio();
       } else {
@@ -269,7 +267,7 @@ export const useAudioAnalyzer = () => {
     isTranscribing,
     toggleMic,
     toggleRecording,
-    toggleDemo,
+    togglePlay,
     getAudioData,
     getOutputAudioData
   };

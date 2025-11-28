@@ -5,9 +5,10 @@ interface VisualizerProps {
   getAudioData: () => AudioData | null;
   getOutputAudioData?: () => AudioData | null;
   isMicOn: boolean;
+  isDemoPlaying: boolean;
 }
 
-const Visualizer = ({ getAudioData, getOutputAudioData, isMicOn }: VisualizerProps) => {
+const Visualizer = ({ getAudioData, getOutputAudioData, isMicOn, isDemoPlaying }: VisualizerProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const requestRef = useRef<number>();
 
@@ -51,15 +52,16 @@ const Visualizer = ({ getAudioData, getOutputAudioData, isMicOn }: VisualizerPro
             ctx.moveTo(x1, y1);
             ctx.lineTo(x2, y2);
             ctx.strokeStyle = `rgba(255, 0, 0, ${percent + 0.2})`;
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 3; // Active Mic
             ctx.stroke();
         }
     } else {
         // Idle state ring
         ctx.beginPath();
         ctx.arc(centerX, centerY, baseRadius, 0, 2 * Math.PI);
+        // Color for inactive mic
         ctx.strokeStyle = '#330000';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1; // Inactive Mic
         ctx.stroke();
     }
 
@@ -69,7 +71,7 @@ const Visualizer = ({ getAudioData, getOutputAudioData, isMicOn }: VisualizerPro
         const innerRadius = baseRadius * 0.8; // Smaller than outer ring
 
         ctx.beginPath();
-        ctx.lineWidth = 2;
+        ctx.lineWidth = isDemoPlaying ? 3 : 1; // Dynamic line width based on demo state
         ctx.strokeStyle = '#00ffff'; // Cyan for output to distinguish
 
         const sliceWidth = (Math.PI * 2) / timeDomain.length;

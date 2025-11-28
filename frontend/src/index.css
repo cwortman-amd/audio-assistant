@@ -30,40 +30,46 @@ body {
   align-items: center;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid #333; /* Dark charcoal outer trace */
-  padding: 0.4em 0.8em;
-  font-size: 0.9em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: transparent; /* Transparent background */
-  cursor: pointer;
-  transition: border-color 0.25s, background-color 0.25s;
-  width: 150px; /* Fixed width for uniform size */
-}
-button:hover {
-  border-color: #ff0000;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
 .control-panel {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  flex-direction: row; /* Horizontal layout */
+  gap: 0.5rem; /* Minimal spacing */
   z-index: 20; /* Ensure it's above the visualizer */
   width: auto; /* Don't take full width */
   justify-content: center;
   align-items: center;
   padding: 0;
   box-sizing: border-box;
+}
+
+button {
+  border-radius: 50%; /* Circular buttons */
+  border: 1px solid #333; /* Dark charcoal outer trace */
+  padding: 0;
+  /* Responsive size: 50px base, but scales down with viewport */
+  width: clamp(30px, 8vmin, 50px);
+  height: clamp(30px, 8vmin, 50px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: transparent; /* Transparent background */
+  cursor: pointer;
+  transition: border-color 0.25s, background-color 0.25s, transform 0.1s, width 0.2s, height 0.2s;
+}
+
+button:active {
+  transform: scale(0.95);
+}
+
+/* Adjust icon size inside button if needed, though Lucide icons are usually fixed size.
+   We might need to scale the SVG if the button gets too small. */
+button svg {
+  width: 60%;
+  height: 60%;
 }
 
 @media (max-width: 600px) {

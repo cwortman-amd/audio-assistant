@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react'
+import { Mic, MicOff, Disc, Square, Play } from 'lucide-react'
 import './index.css'
 import { useAudioAnalyzer } from './hooks/useAudioAnalyzer'
 import Visualizer from './components/Visualizer'
@@ -12,7 +13,7 @@ function App() {
     isTranscribing,
     toggleMic,
     toggleRecording,
-    toggleDemo,
+    togglePlay,
     getAudioData,
     getOutputAudioData
   } = useAudioAnalyzer();
@@ -32,12 +33,13 @@ function App() {
           getAudioData={getAudioData}
           getOutputAudioData={getOutputAudioData}
           isMicOn={isMicOn}
+          isDemoPlaying={isDemoPlaying}
         />
       </div>
 
       <div className="transcription-overlay" style={{
         position: 'absolute',
-        bottom: '150px',
+        bottom: '20px',
         left: '50%',
         transform: 'translateX(-50%)',
         width: '80%',
@@ -54,11 +56,13 @@ function App() {
           ref={transcriptionBoxRef}
           style={{
             backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            border: '1px solid #333',
+            border: 'none',
             borderRadius: '8px',
             padding: '1rem',
-            minHeight: '100px',
-            maxHeight: '200px',
+            /* Line height is 1.5. 3 lines = 4.5em. Padding is 1rem top + 1rem bottom = 2rem. */
+            /* We want it to be compact. */
+            height: 'auto',
+            maxHeight: 'calc(1.5em * 3 + 2rem)',
             overflowY: 'auto',
             color: '#e5e7eb',
             fontFamily: 'monospace',
@@ -72,8 +76,12 @@ function App() {
       </div>
 
       <div className="control-panel">
-        <button onClick={toggleMic} style={{ borderColor: isMicOn ? '#ff0000' : '#333' }}>
-          {isMicOn ? 'Mic ON' : 'Mic OFF'}
+        <button
+          onClick={toggleMic}
+          style={{ borderColor: isMicOn ? '#ff0000' : '#333' }}
+          title={isMicOn ? "Turn Mic Off" : "Turn Mic On"}
+        >
+          {isMicOn ? <Mic size={24} color="#ff0000" /> : <MicOff size={24} color="#666" />}
         </button>
 
         <button
@@ -82,21 +90,21 @@ function App() {
           style={{
             backgroundColor: isRecording ? '#ff0000' : 'transparent',
             borderColor: isRecording ? '#ff0000' : '#333',
-            color: isRecording ? '#000' : (isMicOn ? '#fff' : '#666'),
             cursor: isMicOn ? 'pointer' : 'not-allowed'
           }}
+          title={isRecording ? "Stop Recording" : "Start Recording"}
         >
-          {isRecording ? 'Stop Recording' : 'Record'}
+          {isRecording ? <Square size={24} color="#000" fill="#000" /> : <Disc size={24} color={isMicOn ? "#fff" : "#666"} />}
         </button>
 
         <button
-          onClick={toggleDemo}
+          onClick={togglePlay}
           style={{
             borderColor: isDemoPlaying ? '#00ffff' : '#333',
-            color: isDemoPlaying ? '#00ffff' : '#fff'
           }}
+          title={isDemoPlaying ? "Stop Demo" : "Play Demo"}
         >
-          {isDemoPlaying ? 'Stop Demo' : 'Play Demo'}
+          {isDemoPlaying ? <Square size={24} color="#00ffff" fill="#00ffff" /> : <Play size={24} color="#fff" />}
         </button>
       </div>
     </>
