@@ -3,10 +3,11 @@ import { AudioData } from '../hooks/useAudioAnalyzer';
 
 interface VisualizerProps {
   getAudioData: () => AudioData | null;
+  getOutputAudioData?: () => AudioData | null;
   isMicOn: boolean;
 }
 
-const Visualizer = ({ getAudioData, isMicOn }: VisualizerProps) => {
+const Visualizer = ({ getAudioData, getOutputAudioData, isMicOn }: VisualizerProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const requestRef = useRef<number>();
 
@@ -17,75 +18,94 @@ const Visualizer = ({ getAudioData, isMicOn }: VisualizerProps) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const data = getAudioData();
+    const micData = getAudioData();
+    const outputData = getOutputAudioData ? getOutputAudioData() : null;
 
     // Clear canvas
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    if (!isMicOn || !data) {
-        // Draw idle state (dim red circle)
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const baseRadius = Math.min(centerX, centerY) * 0.4;
+
+    // --- 1. Draw Outer Circle (Mic Input - Frequency Bars) ---
+    if (isMicOn && micData) {
+        const { frequency } = micData;
+        const barCount = 120;
+        const step = Math.floor(frequency.length / barCount);
+
+        for (let i = 0; i < barCount; i++) {
+            const value = frequency[i * step];
+            const percent = value / 255;
+            const barHeight = percent * (Math.min(centerX, centerY) * 0.5);
+
+            const angle = (i / barCount) * 2 * Math.PI;
+
+            const x1 = centerX + Math.cos(angle) * baseRadius;
+            const y1 = centerY + Math.sin(angle) * baseRadius;
+            const x2 = centerX + Math.cos(angle) * (baseRadius + barHeight);
+            const y2 = centerY + Math.sin(angle) * (baseRadius + barHeight);
+
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.strokeStyle = `rgba(255, 0, 0, ${percent + 0.2})`;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+    } else {
+        // Idle state ring
         ctx.beginPath();
-        ctx.arc(centerX, centerY, 50, 0, 2 * Math.PI);
+        ctx.arc(centerX, centerY, baseRadius, 0, 2 * Math.PI);
         ctx.strokeStyle = '#330000';
         ctx.lineWidth = 2;
         ctx.stroke();
-
-        requestRef.current = requestAnimationFrame(draw);
-        return;
     }
 
-    const { frequency, timeDomain } = data;
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const radius = Math.min(centerX, centerY) * 0.4; // Base radius
+    // --- 2. Draw Inner Circle (Audio Out - Waveform) ---
+    if (outputData) {
+        const { timeDomain } = outputData;
+        const innerRadius = baseRadius * 0.8; // Smaller than outer ring
 
-    // 1. Draw Radial Frequency Bars
-    const barCount = 120; // Number of bars
-    const step = Math.floor(frequency.length / barCount);
+        ctx.beginPath();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#00ffff'; // Cyan for output to distinguish
 
-    for (let i = 0; i < barCount; i++) {
-      const value = frequency[i * step];
-      const percent = value / 255;
-      const barHeight = percent * (Math.min(centerX, centerY) * 0.5);
+        const sliceWidth = (Math.PI * 2) / timeDomain.length;
+        let angle = 0;
 
-      const angle = (i / barCount) * 2 * Math.PI;
+        for (let i = 0; i < timeDomain.length; i++) {
+            const v = timeDomain[i] / 128.0; // 0..2, 1 is center
+            // Map v to radius deviation
+            // v=1 -> radius = innerRadius
+            // v>1 -> radius > innerRadius
+            // v<1 -> radius < innerRadius
 
-      const x1 = centerX + Math.cos(angle) * radius;
-      const y1 = centerY + Math.sin(angle) * radius;
-      const x2 = centerX + Math.cos(angle) * (radius + barHeight);
-      const y2 = centerY + Math.sin(angle) * (radius + barHeight);
+            // Amplify the wave effect slightly
+            const radius = innerRadius + (v - 1) * (innerRadius * 0.3);
 
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.strokeStyle = `rgba(255, 0, 0, ${percent + 0.2})`; // Red with opacity based on volume
-      ctx.lineWidth = 2;
-      ctx.stroke();
+            const x = centerX + Math.cos(angle) * radius;
+            const y = centerY + Math.sin(angle) * radius;
+
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+
+            angle += sliceWidth;
+        }
+
+        ctx.closePath();
+        ctx.stroke();
+
+        // Add a glow
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#00ffff';
+        ctx.stroke();
+        ctx.shadowBlur = 0; // Reset
     }
-
-    // 2. Draw Circular Volume Arc (Loudness)
-    // Calculate RMS (Root Mean Square) for loudness
-    let sum = 0;
-    for (let i = 0; i < timeDomain.length; i++) {
-        const amplitude = (timeDomain[i] - 128) / 128;
-        sum += amplitude * amplitude;
-    }
-    const rms = Math.sqrt(sum / timeDomain.length);
-    const volumeScale = 1 + (rms * 2); // Scale factor
-
-    // Inner pulsing circle
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius * 0.8 * volumeScale, 0, 2 * Math.PI);
-    ctx.strokeStyle = '#ff0000';
-    ctx.lineWidth = 4;
-    ctx.stroke();
-
-    // Fill inner circle with low opacity red
-    ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
-    ctx.fill();
 
     requestRef.current = requestAnimationFrame(draw);
   };
@@ -97,7 +117,7 @@ const Visualizer = ({ getAudioData, isMicOn }: VisualizerProps) => {
         cancelAnimationFrame(requestRef.current);
       }
     };
-  }, [isMicOn, getAudioData]); // Re-bind if dependencies change
+  }, [isMicOn, getAudioData, getOutputAudioData]);
 
   // Handle resize
   useEffect(() => {
@@ -121,7 +141,7 @@ const Visualizer = ({ getAudioData, isMicOn }: VisualizerProps) => {
         left: 0,
         width: '100%',
         height: '100%',
-        zIndex: 1 // Behind controls
+        zIndex: 1
       }}
     />
   );

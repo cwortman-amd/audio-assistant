@@ -3,12 +3,25 @@ import { useAudioAnalyzer } from './hooks/useAudioAnalyzer'
 import Visualizer from './components/Visualizer'
 
 function App() {
-  const { isMicOn, isRecording, toggleMic, toggleRecording, getAudioData } = useAudioAnalyzer();
+  const {
+    isMicOn,
+    isRecording,
+    isDemoPlaying,
+    toggleMic,
+    toggleRecording,
+    toggleDemo,
+    getAudioData,
+    getOutputAudioData
+  } = useAudioAnalyzer();
 
   return (
     <>
       <div className="visualizer-container">
-        <Visualizer getAudioData={getAudioData} isMicOn={isMicOn} />
+        <Visualizer
+          getAudioData={getAudioData}
+          getOutputAudioData={getOutputAudioData}
+          isMicOn={isMicOn}
+        />
       </div>
 
       <div className="control-panel">
@@ -26,6 +39,16 @@ function App() {
           }}
         >
           {isRecording ? 'Stop Recording' : 'Record'}
+        </button>
+
+        <button
+          onClick={toggleDemo}
+          style={{
+            borderColor: isDemoPlaying ? '#00ffff' : 'transparent',
+            color: isDemoPlaying ? '#00ffff' : '#fff'
+          }}
+        >
+          {isDemoPlaying ? 'Stop Demo' : 'Play Demo'}
         </button>
       </div>
     </>
