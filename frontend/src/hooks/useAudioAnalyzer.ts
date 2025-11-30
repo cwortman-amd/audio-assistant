@@ -1,14 +1,16 @@
+
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { Settings } from '../components/SettingsModal';
 
 export interface AudioData {
   frequency: Uint8Array;
   timeDomain: Uint8Array;
 }
 
-export const useAudioAnalyzer = () => {
+export const useAudioAnalyzer = (settings: Settings) => {
   const [isMicOn, setIsMicOn] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [isDemoPlaying, setIsDemoPlaying] = useState(false);
+  const [isRecordingPlaying, setIsRecordingPlaying] = useState(false);
   const [transcription, setTranscription] = useState("");
   const [isTranscribing, setIsTranscribing] = useState(false);
 
@@ -20,6 +22,7 @@ export const useAudioAnalyzer = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const socketRef = useRef<WebSocket | null>(null);
+  const recordingStartTimeRef = useRef<number | null>(null);
 
   // Output refs
   const outputAnalyserRef = useRef<AnalyserNode | null>(null);
@@ -41,9 +44,16 @@ export const useAudioAnalyzer = () => {
   }, []);
 
   const connectWebSocket = useCallback(() => {
+    if (!settings.transcriptionEnabled) return;
     if (socketRef.current?.readyState === WebSocket.OPEN) return;
 
-    socketRef.current = new WebSocket('ws://localhost:8000/ws/transcribe');
+    const params = new URLSearchParams();
+    if (settings.saveFolder) params.append('save_folder', settings.saveFolder);
+    if (settings.filenamePrefix) params.append('filename_prefix', settings.filenamePrefix);
+    if (settings.audioOutput) params.append('format', settings.audioOutput);
+
+    const wsUrl = `ws://localhost:8000/ws/transcribe?${params.toString()}`;
+    socketRef.current = new WebSocket(wsUrl);
 
     socketRef.current.onopen = () => {
       console.log('WebSocket Connected');
@@ -52,7 +62,6 @@ export const useAudioAnalyzer = () => {
 
     socketRef.current.onmessage = (event) => {
       const text = event.data;
-      // Backend now sends full transcription, so we replace instead of append
       setTranscription(text);
     };
 
@@ -65,16 +74,10 @@ export const useAudioAnalyzer = () => {
       console.log('WebSocket Disconnected');
       setIsTranscribing(false);
     };
-  }, []);
+  }, [settings.transcriptionEnabled, settings.saveFolder, settings.filenamePrefix, settings.audioOutput]);
 
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
-
-  // ... (existing refs)
-
-  // ... (initAudioContext)
-
-  // ... (WebSocket logic)
 
   const startAudio = useCallback(async () => {
     try {
@@ -97,37 +100,76 @@ export const useAudioAnalyzer = () => {
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
-          chunksRef.current.push(e.data);
-          // Send to WebSocket if open
+          // Only save to chunks if explicitly recording
+          if (isRecordingRef.current) {
+             chunksRef.current.push(e.data);
+          }
+
+          // Send to WebSocket if open (Continuous or Recording)
           if (socketRef.current?.readyState === WebSocket.OPEN) {
             socketRef.current.send(e.data);
           }
         }
       };
+
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        chunksRef.current = [];
-        const url = URL.createObjectURL(blob);
-        setRecordedAudioUrl(url);
-        console.log("Recording saved:", url);
+        if (chunksRef.current.length > 0) {
+            const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+            chunksRef.current = [];
+            const url = URL.createObjectURL(blob);
+            setRecordedAudioUrl(url);
+            console.log("Recording saved:", url);
+        }
       };
+
       mediaRecorderRef.current = mediaRecorder;
+
+      // If continuous mode, start recorder immediately to stream
+      if (settings.transcriptionEnabled && settings.transcriptionMode === 'continuous') {
+          connectWebSocket();
+          mediaRecorder.start(1000);
+      }
 
       setIsMicOn(true);
     } catch (error) {
       console.error('Error accessing microphone:', error);
       setIsMicOn(false);
     }
-  }, []);
+  }, [settings.transcriptionEnabled, settings.transcriptionMode, connectWebSocket, isRecording]);
+
+  // Handle isRecording change for MediaRecorder
+  // We need a way to start/stop MediaRecorder if mode is NOT continuous
+  // Or just use a flag?
+  // Problem: startAudio is called once. isRecording changes later.
+  // We need a ref for isRecording to be used inside ondataavailable?
+  // Actually, state inside callback might be stale if not careful.
+  // Let's use a ref for isRecording state to be safe in callbacks.
+  const isRecordingRef = useRef(isRecording);
+  useEffect(() => { isRecordingRef.current = isRecording; }, [isRecording]);
+
+  // Re-bind ondataavailable if needed? No, just use ref inside.
+  useEffect(() => {
+      if (mediaRecorderRef.current) {
+          mediaRecorderRef.current.ondataavailable = (e) => {
+            if (e.data.size > 0) {
+              if (isRecordingRef.current) {
+                 chunksRef.current.push(e.data);
+              }
+              if (socketRef.current?.readyState === WebSocket.OPEN) {
+                socketRef.current.send(e.data);
+              }
+            }
+          };
+      }
+  }, []); // Run once? Or when mediaRecorder changes?
+  // Actually, mediaRecorder is created in startAudio. We should set it there.
+  // But startAudio closes over the initial state.
+  // Better to use the ref approach inside startAudio's definition.
 
   const stopAudio = useCallback(() => {
     if (sourceRef.current) {
       sourceRef.current.disconnect();
       sourceRef.current = null;
-    }
-    // Don't suspend context if demo is playing
-    if (audioContextRef.current && !isDemoPlaying) {
-      // audioContextRef.current.suspend(); // Optional: keep it running for smoother switching
     }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
@@ -141,7 +183,7 @@ export const useAudioAnalyzer = () => {
     setIsMicOn(false);
     setIsRecording(false);
     setIsTranscribing(false);
-  }, [isDemoPlaying]);
+  }, [isRecordingPlaying]);
 
   const toggleMic = useCallback(() => {
     if (isMicOn) {
@@ -155,25 +197,81 @@ export const useAudioAnalyzer = () => {
     if (!isMicOn) return;
 
     if (isRecording) {
-      mediaRecorderRef.current?.stop();
-      setIsRecording(false);
-      if (socketRef.current) {
-        socketRef.current.close();
-        socketRef.current = null;
-      }
-    } else {
-      connectWebSocket();
-      // Wait for connection? Or just start and let onopen handle it?
-      // For simplicity, we start recording immediately, but maybe wait 100ms
-      setTimeout(() => {
-          mediaRecorderRef.current?.start(1000); // Chunk every 1s
-          setIsRecording(true);
-      }, 100);
-    }
-  }, [isMicOn, isRecording, connectWebSocket]);
+      // Stop Recording
+      if (settings.transcriptionMode === 'recording') {
+          mediaRecorderRef.current?.stop(); // This stops the stream too
+          if (socketRef.current) {
+            socketRef.current.close();
+            socketRef.current = null;
+          }
+      } else {
+          // Continuous: Just stop saving chunks.
+          // But we need to trigger 'onstop' to save the file?
+          // MediaRecorder.stop() fires onstop. But then it stops capturing.
+          // If we want to keep streaming, we have to restart it?
+          // Or we can manually slice the chunks?
+          // Simplest: Stop and Restart if continuous.
+          mediaRecorderRef.current?.stop();
+          // We need to restart it for continuous streaming after a brief pause?
+          // This might interrupt transcription.
+          // Alternative: Don't use onstop for saving. Use a manual save function.
 
-  // Demo Audio Functions (Replay Recorded Audio)
-  const playDemoAudio = useCallback(() => {
+          // Let's stick to: Stop recorder to save file.
+          // If continuous, we immediately restart it.
+          setTimeout(() => {
+              if (isMicOn && mediaRecorderRef.current?.state === 'inactive') {
+                  mediaRecorderRef.current.start(1000);
+              }
+          }, 100);
+      }
+      setIsRecording(false);
+      recordingStartTimeRef.current = null;
+    } else {
+      // Start Recording
+      chunksRef.current = []; // Clear previous
+
+      if (settings.transcriptionEnabled && settings.transcriptionMode === 'recording') {
+          connectWebSocket();
+          if (mediaRecorderRef.current?.state === 'inactive') {
+              mediaRecorderRef.current.start(1000);
+          }
+      } else if (settings.transcriptionMode === 'continuous') {
+          // Already running?
+          if (mediaRecorderRef.current?.state === 'inactive') {
+              mediaRecorderRef.current.start(1000);
+          }
+      } else {
+          // Transcription disabled
+           if (mediaRecorderRef.current?.state === 'inactive') {
+              mediaRecorderRef.current.start(1000);
+          }
+      }
+
+      setIsRecording(true);
+      recordingStartTimeRef.current = Date.now();
+    }
+  }, [isMicOn, isRecording, connectWebSocket, settings.transcriptionMode, settings.transcriptionEnabled]);
+
+  // Max Duration Check
+  useEffect(() => {
+      let interval: number;
+      if (isRecording && settings.maxDuration > 0) {
+          interval = window.setInterval(() => {
+              if (recordingStartTimeRef.current) {
+                  const elapsedMinutes = (Date.now() - recordingStartTimeRef.current) / 60000;
+                  if (elapsedMinutes >= settings.maxDuration) {
+                      console.log("Max duration reached. Stopping recording.");
+                      toggleRecording(); // Toggle off
+                  }
+              }
+          }, 1000);
+      }
+      return () => clearInterval(interval);
+  }, [isRecording, settings.maxDuration, toggleRecording]);
+
+
+  // Recording Playback Functions
+  const playRecording = useCallback(() => {
     if (!recordedAudioUrl) {
       console.warn("No recorded audio to play");
       return;
@@ -204,28 +302,40 @@ export const useAudioAnalyzer = () => {
     outputAnalyserRef.current!.connect(ctx.destination);
 
     audio.onended = () => {
-      setIsDemoPlaying(false);
+      setIsRecordingPlaying(false);
     };
 
-    audio.play();
-    setIsDemoPlaying(true);
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          setIsRecordingPlaying(true);
+        })
+        .catch((error) => {
+          console.error("Playback failed:", error);
+          setIsRecordingPlaying(false);
+        });
+    } else {
+        // Fallback for older browsers or if play() doesn't return a promise
+        setIsRecordingPlaying(true);
+    }
   }, [recordedAudioUrl]);
 
-  const stopDemoAudio = useCallback(() => {
+  const stopPlayback = useCallback(() => {
     if (audioElementRef.current) {
       audioElementRef.current.pause();
       audioElementRef.current.currentTime = 0;
     }
-    setIsDemoPlaying(false);
+    setIsRecordingPlaying(false);
   }, []);
 
-  const togglePlay = useCallback(() => {
-      if (isDemoPlaying) {
-          stopDemoAudio();
+  const togglePlayback = useCallback(() => {
+      if (isRecordingPlaying) {
+          stopPlayback();
       } else {
-          playDemoAudio();
+          playRecording();
       }
-  }, [isDemoPlaying, playDemoAudio, stopDemoAudio]);
+  }, [isRecordingPlaying, playRecording, stopPlayback]);
 
   const getAudioData = useCallback((): AudioData | null => {
     if (!analyserRef.current) return null;
@@ -262,12 +372,12 @@ export const useAudioAnalyzer = () => {
   return {
     isMicOn,
     isRecording,
-    isDemoPlaying,
+    isRecordingPlaying,
     transcription,
     isTranscribing,
     toggleMic,
     toggleRecording,
-    togglePlay,
+    togglePlayback,
     getAudioData,
     getOutputAudioData
   };

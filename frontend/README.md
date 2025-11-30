@@ -33,6 +33,10 @@ The application will be available at `http://localhost:5173`.
 1.  **Mic Control**: Click the **Microphone** icon to toggle the microphone on/off.
 2.  **Recording**: Click the **Disc** icon to Start/Stop recording. Audio is sent to the backend only while recording.
 3.  **Demo**: Click the **Play** icon to play back the last recorded audio clip.
+4.  **Settings**: Click the **Gear** icon to configure:
+    *   **Audio Output**: Choose between Opus (WebM) or MP3 (requires backend support).
+    *   **Max Duration**: Set a limit for recording length (default: 60 mins).
+    *   **Transcription**: Toggle on/off and choose mode (Recording vs Continuous).
 
 ## UI Overview
 - **Visualizer**: A circular audio visualizer that reacts to microphone input (red outer ring) and audio playback (cyan inner ring).

@@ -64,6 +64,10 @@ def test_e2e_transcription():
         # Ensure page is loaded
         expect(page.locator("text=Transcribing...")).not_to_be_visible()
 
+        # Check for Settings Button (New Feature Verification)
+        expect(page.locator('button[title="Settings"]')).to_be_visible()
+
+
         # Click Mic ON
         # Assuming the button has a title "Turn Mic On" or we can find it by icon/class
         # Based on App.tsx: title="Turn Mic On"

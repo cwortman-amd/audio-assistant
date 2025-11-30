@@ -1,22 +1,33 @@
-import { useRef, useEffect } from 'react'
-import { Mic, MicOff, Disc, Square, Play } from 'lucide-react'
+import { useRef, useEffect, useState } from 'react'
+import { Mic, MicOff, Disc, Square, Play, Settings as SettingsIcon } from 'lucide-react'
 import './index.css'
 import { useAudioAnalyzer } from './hooks/useAudioAnalyzer'
 import Visualizer from './components/Visualizer'
+import SettingsModal, { Settings } from './components/SettingsModal'
 
 function App() {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState<Settings>({
+    audioOutput: 'opus',
+    saveFolder: '',
+    filenamePrefix: 'recording',
+    maxDuration: 60,
+    transcriptionEnabled: true,
+    transcriptionMode: 'recording'
+  });
+
   const {
     isMicOn,
     isRecording,
-    isDemoPlaying,
+    isRecordingPlaying,
     transcription,
     isTranscribing,
     toggleMic,
     toggleRecording,
-    togglePlay,
+    togglePlayback,
     getAudioData,
     getOutputAudioData
-  } = useAudioAnalyzer();
+  } = useAudioAnalyzer(settings);
 
   const transcriptionBoxRef = useRef<HTMLDivElement>(null);
 
@@ -28,12 +39,19 @@ function App() {
 
   return (
     <>
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        settings={settings}
+        onSettingsChange={setSettings}
+      />
+
       <div className="visualizer-container">
         <Visualizer
           getAudioData={getAudioData}
           getOutputAudioData={getOutputAudioData}
           isMicOn={isMicOn}
-          isDemoPlaying={isDemoPlaying}
+          isDemoPlaying={isRecordingPlaying}
         />
       </div>
 
@@ -98,13 +116,21 @@ function App() {
         </button>
 
         <button
-          onClick={togglePlay}
+          onClick={togglePlayback}
           style={{
-            borderColor: isDemoPlaying ? '#00ffff' : '#333',
+            borderColor: isRecordingPlaying ? '#00ffff' : '#333',
           }}
-          title={isDemoPlaying ? "Stop Demo" : "Play Demo"}
+          title={isRecordingPlaying ? "Stop Playback" : "Play Recording"}
         >
-          {isDemoPlaying ? <Square size={24} color="#00ffff" /> : <Play size={24} color={isMicOn ? "#fff" : "#666"} />}
+          {isRecordingPlaying ? <Square size={24} color="#00ffff" /> : <Play size={24} color={isMicOn ? "#fff" : "#666"} />}
+        </button>
+
+        <button
+          onClick={() => setIsSettingsOpen(true)}
+          style={{ borderColor: '#333' }}
+          title="Settings"
+        >
+          <SettingsIcon size={24} color={isMicOn ? "#fff" : "#666"} />
         </button>
       </div>
     </>

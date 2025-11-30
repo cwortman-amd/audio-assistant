@@ -4,6 +4,7 @@ from whisper_service import WhisperService
 import os
 import tempfile
 import asyncio
+import time
 
 app = FastAPI()
 
@@ -26,12 +27,16 @@ async def root():
 import ffmpeg
 import numpy as np
 
+import shutil
+from pathlib import Path
+
 @app.websocket("/ws/transcribe")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket, save_folder: str = None, filename_prefix: str = "recording", format: str = "opus"):
     await websocket.accept()
-    print("WebSocket connection accepted")
+    print(f"WebSocket connection accepted. Save Folder: {save_folder}, Prefix: {filename_prefix}, Format: {format}")
 
     # Create a unique temporary file for this session
+    # Use .webm as container for Opus (default from MediaRecorder)
     session_file = tempfile.NamedTemporaryFile(delete=False, suffix=".webm")
     session_file_path = session_file.name
     session_file.close() # Close handle so we can append in loop
@@ -74,6 +79,28 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         print(f"Error in websocket: {e}")
     finally:
+        # Save file if requested
+        if save_folder and os.path.exists(session_file_path):
+            try:
+                # Ensure directory exists
+                target_path = Path(save_folder)
+                target_path.mkdir(parents=True, exist_ok=True)
+
+                # Generate filename with date
+                # Format: prefix_YYYY-MM-DD_HH-MM-SS.webm
+                timestamp_str = time.strftime("%Y-%m-%d_%H-%M-%S")
+                filename = f"{filename_prefix}_{timestamp_str}.webm"
+                target_file = target_path / filename
+
+                # If user requested mp3, we should convert.
+                # For now, we just copy the webm.
+                # TODO: Implement conversion if format=='mp3'
+
+                shutil.copy2(session_file_path, target_file)
+                print(f"Saved recording to {target_file}")
+            except Exception as e:
+                print(f"Failed to save recording: {e}")
+
         # Clean up session file
         if os.path.exists(session_file_path):
             os.remove(session_file_path)
